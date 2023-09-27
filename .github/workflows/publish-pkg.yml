@@ -1,0 +1,83 @@
+name: Publish package
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+  release:
+    types: [published]
+
+jobs:
+  build-package:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+      - name: Install env.
+        run: |
+          yarn install
+          yarn husky install
+
+      - name: Build UI
+        run: yarn build
+      - run: ls -lh build/
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: build-${{ github.sha }}
+          path: build/
+
+  upload-package:
+    runs-on: ubuntu-20.04
+    needs: build-package
+    if: github.event_name == 'release'
+    env:
+      # see: https://stackoverflow.com/a/61329476/4521646
+      VERSION: ${{ github.event.release.tag_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v3
+        with:
+          name: build-${{ github.sha }}
+          path: build/
+      - name: Pack UI
+        working-directory: build/
+        run: |
+          echo "$VERSION" > version.info
+          tar -czvf ../${VERSION}.tar.gz *
+      - run: ls -lh .
+      - name: Upload to release
+        uses: AButler/upload-release-assets@v2.0
+        with:
+          files: "${{ env.VERSION }}.tar.gz"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-package:
+    runs-on: ubuntu-20.04
+    needs: build-package
+    if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v3
+        with:
+          name: build-${{ github.sha }}
+          path: build/
+      - run: echo "VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+      - name: Pack UI
+        working-directory: build/
+        run: |
+          echo "$VERSION" > version.info
+          tar -czvf ../${VERSION}.tar.gz *
+
+      - name: Upload build to S3
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_PUB_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_PUB_SECRET_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          pip install -q awscli
+          ls -lh .
+          aws s3 cp ${VERSION}.tar.gz s3://lightning-packages/ui/ --acl public-read
