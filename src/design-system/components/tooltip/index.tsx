@@ -1,10 +1,11 @@
 import MuiTooltip, { TooltipProps as MuiTooltipProps } from "@mui/material/Tooltip";
 
-import { Box } from "..";
+import { Box, BoxProps } from "..";
 
 export type TooltipProps = Omit<MuiTooltipProps, "disableInteractive" | "enterDelay" | "title"> & {
   title?: MuiTooltipProps["title"];
   width?: number | string;
+  wrapperSx?: BoxProps["sx"];
   interactive?: boolean;
   delay?: number;
 };
@@ -14,6 +15,7 @@ const Tooltip = ({
   children,
   placement = "top",
   width,
+  wrapperSx,
   interactive = false,
   delay = 500,
   enterNextDelay = 400,
@@ -27,7 +29,7 @@ const Tooltip = ({
       enterDelay={delay}
       enterNextDelay={enterNextDelay}
       {...otherTooltipProps}>
-      <Box component={"span"} sx={{ cursor: interactive ? "pointer" : "inherit", width }}>
+      <Box component={"span"} sx={{ cursor: interactive ? "pointer" : "inherit", width, ...wrapperSx }}>
         {children}
       </Box>
     </MuiTooltip>
