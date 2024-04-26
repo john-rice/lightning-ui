@@ -7,6 +7,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import { Tooltip } from "..";
 import { Box, Divider, SxProps, Theme } from "../";
+import AnimateHeight, { AnimateHeightProps } from "react-animate-height";
 
 type TabItemMetadata = {
   title: MuiTabProps["label"];
@@ -26,6 +27,8 @@ type NavigableTabItem = {
 
 export type TabItem = (StaticTabItem | NavigableTabItem) & TabItemMetadata;
 
+export type LuiAnimateHeightProps = Omit<AnimateHeightProps, "height">;
+
 export type TabsProps = {
   selectedTab?: number;
   tabItems: TabItem[];
@@ -38,6 +41,8 @@ export type TabsProps = {
   sxTabs?: SxProps<Theme>;
   sxContent?: SxProps<Theme>;
   onTabChanged?: (tab: number) => void;
+  animate?: boolean;
+  animateHeightProps?: LuiAnimateHeightProps;
 };
 
 const Tabs = ({
@@ -47,6 +52,8 @@ const Tabs = ({
   sxTabs,
   sxContent,
   onTabChanged,
+  animate,
+  animateHeightProps,
   prerenderTabs = true,
   divider = true,
 }: TabsProps) => {
@@ -170,22 +177,80 @@ const Tabs = ({
       </MuiTabs>
       {divider && <Divider />}
       {hasContent && (
-        <Box paddingTop={divider ? 3 : 0} paddingBottom={1.5} sx={sxContent}>
-          {tabItems.map((tabItem, index) => (
-            <PrerenderableTabPanel
-              sx={{ padding: 0, background: (theme: any) => theme.palette.background.default }}
-              key={index}
-              index={index}
-              selectedIndex={selectedTab}
-              prerender={prerenderTabs}>
-              {tabItem.content}
-            </PrerenderableTabPanel>
-          ))}
-        </Box>
+        <TabContent
+          tabItems={tabItems}
+          selectedTab={selectedTab}
+          prerenderTabs={prerenderTabs}
+          divider={divider}
+          sxContent={sxContent}
+          animate={animate}
+          animateHeightProps={animateHeightProps}
+        />
       )}
     </TabContext>
   );
 };
+
+const msPerPixel = 2.5;
+function TabContent({
+  tabItems,
+  selectedTab,
+  prerenderTabs,
+  divider,
+  sxContent,
+  animate,
+  animateHeightProps,
+}: {
+  tabItems: TabItem[];
+  selectedTab: number;
+  prerenderTabs: boolean;
+  divider: boolean;
+  sxContent?: SxProps<Theme>;
+  animate?: boolean;
+  animateHeightProps?: LuiAnimateHeightProps;
+}) {
+  const [contentRef, setContentRef] = useState<HTMLDivElement | null>(null);
+  const [height, setHeight] = useState<number>(0);
+  const [duration, setDuration] = useState<number>(0);
+
+  useEffect(() => {
+    if (contentRef) {
+      setHeight(prevHeight => {
+        const delta = Math.abs(contentRef.clientHeight - prevHeight);
+        setDuration(delta * msPerPixel);
+        return contentRef.clientHeight;
+      });
+    }
+  }, [contentRef, selectedTab]);
+
+  const content = (
+    <Box ref={setContentRef} paddingTop={divider ? 3 : 0} paddingBottom={1.5} sx={sxContent}>
+      {tabItems.map((tabItem, index) => (
+        <PrerenderableTabPanel
+          sx={{ padding: 0, background: (theme: any) => theme.palette.background.default }}
+          key={index}
+          index={index}
+          selectedIndex={selectedTab}
+          prerender={prerenderTabs}>
+          {tabItem.content}
+        </PrerenderableTabPanel>
+      ))}
+    </Box>
+  );
+
+  if (!animate) {
+    return content;
+  }
+
+  return (
+    <AnimateHeight
+      {...animateHeightProps}
+      height={height || "auto"}
+      duration={animateHeightProps?.duration || duration}>
+      {content}
+    </AnimateHeight>
+  );
+}
 
 type PrerenderableTabPanelProps = {
   sx?: BoxProps["sx"];
