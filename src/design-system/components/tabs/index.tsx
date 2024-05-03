@@ -8,6 +8,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Tooltip } from "..";
 import { Box, Divider, SxProps, Theme } from "../";
 import AnimateHeight, { AnimateHeightProps } from "react-animate-height";
+import useResizeObserver from "../../../hooks/useResizeObserver";
 
 type TabItemMetadata = {
   title: MuiTabProps["label"];
@@ -209,22 +210,9 @@ function TabContent({
   animate?: boolean;
   animateHeightProps?: LuiAnimateHeightProps;
 }) {
-  const [contentRef, setContentRef] = useState<HTMLDivElement | null>(null);
-  const [height, setHeight] = useState<number>(0);
-  const [duration, setDuration] = useState<number>(0);
-
-  useEffect(() => {
-    if (contentRef) {
-      setHeight(prevHeight => {
-        const delta = Math.abs(contentRef.clientHeight - prevHeight);
-        setDuration(delta * msPerPixel);
-        return contentRef.clientHeight;
-      });
-    }
-  }, [contentRef, selectedTab]);
-
+  const [contentDiv, setContentDiv] = useState<HTMLDivElement | null>(null);
   const content = (
-    <Box ref={setContentRef} paddingTop={divider ? 3 : 0} paddingBottom={1.5} sx={sxContent}>
+    <Box ref={setContentDiv} paddingTop={divider ? 3 : 0} paddingBottom={1.5} sx={sxContent}>
       {tabItems.map((tabItem, index) => (
         <PrerenderableTabPanel
           sx={{ padding: 0, background: (theme: any) => theme.palette.background.default }}
@@ -238,18 +226,30 @@ function TabContent({
     </Box>
   );
 
-  if (!animate) {
-    return content;
+  const [height, setHeight] = useState<number>(0);
+  const [duration, setDuration] = useState<number>(0);
+  const resizeObserver = useResizeObserver(contentDiv);
+
+  useEffect(() => {
+    setHeight(prevHeight => {
+      const delta = Math.abs(resizeObserver?.height - prevHeight);
+      setDuration(delta * msPerPixel);
+      return resizeObserver?.height;
+    });
+  }, [resizeObserver?.height, selectedTab]);
+
+  if (animate) {
+    return (
+      <AnimateHeight
+        {...animateHeightProps}
+        height={height || "auto"}
+        duration={animateHeightProps?.duration || duration}>
+        {content}
+      </AnimateHeight>
+    );
   }
 
-  return (
-    <AnimateHeight
-      {...animateHeightProps}
-      height={height || "auto"}
-      duration={animateHeightProps?.duration || duration}>
-      {content}
-    </AnimateHeight>
-  );
+  return content;
 }
 
 type PrerenderableTabPanelProps = {
