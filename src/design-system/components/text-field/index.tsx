@@ -37,7 +37,6 @@ const statusIcon: Record<string, ReactNode> = {
 
 export type TextFieldProps = {
   icon?: ReactNode;
-  type?: "text" | "number" | "password";
   onChange: (value: string | null) => void;
   value?: unknown;
   suffix?: string;
@@ -61,6 +60,8 @@ export type TextFieldProps = {
     | "autoCapitalize"
     | "autoCorrect"
     | "autoFocus"
+    | "type"
+    | "onKeyDown"
   >;
 
 const INPUT_TEXT_FONT = `normal 14px/20px "Inter"`;
