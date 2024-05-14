@@ -1,4 +1,5 @@
 import Alert from "./alert";
+import AutoResize from "./auto-resize";
 import Banner from "./banner";
 import Breadcrumbs from "./breadcrumbs";
 import Button from "./button";
@@ -30,6 +31,7 @@ import Typography from "./typography";
 export * from "@mui/material";
 
 export {
+  AutoResize,
   Typography,
   Button,
   ButtonGroup,
